@@ -1,0 +1,86 @@
+using UnityEngine;
+using System.Collections;
+
+public class PistolShoot : MonoBehaviour
+{
+    [Header("Setup Connections")]
+    public GameObject bulletPrefab; // Drag your blue Bullet Prefab here
+    public Transform muzzlePoint;    // Drag your Muzzle object here
+
+    [Header("Weapon Configurations")]
+    public float fireRate = 0.15f;  // Lowered so you can spam-click quickly!
+    private float nextTimeToFire = 0f;
+
+    [Header("Audio Custom Cut Settings")]
+    [Tooltip("The exact second in the audio file where the sound should START playing.")]
+    public float audioStartTime = 0.0f;
+
+    [Tooltip("The exact second in the audio file where the sound should STOP playing.")]
+    public float audioEndTime = 0.2f;
+
+    [Range(0f, 1f)] public float volume = 1f;
+
+    private AudioSource gunAudio;
+
+    void Start()
+    {
+        gunAudio = GetComponent<AudioSource>();
+    }
+
+    void Update()
+    {
+        // Fires instantly when you left-click and the gun is off cooldown
+        if (Input.GetMouseButtonDown(0) && Time.time >= nextTimeToFire)
+        {
+            nextTimeToFire = Time.time + fireRate;
+            Shoot();
+        }
+    }
+
+    void Shoot()
+    {
+        // 1. Spawns the physical bullet
+        if (bulletPrefab != null && muzzlePoint != null)
+        {
+            Instantiate(bulletPrefab, muzzlePoint.position, muzzlePoint.rotation);
+        }
+
+        // 2. Spawns an independent, overlapping audio block that honors your custom durations
+        if (gunAudio != null && gunAudio.clip != null)
+        {
+            StartCoroutine(PlaySpammableAudioCut(gunAudio.clip));
+        }
+    }
+
+    IEnumerator PlaySpammableAudioCut(AudioClip clip)
+    {
+        // Create an independent object to handle this specific shot's audio
+        GameObject tempAudioObj = new GameObject("TempSpamAudio");
+
+        // Attach it to the main camera so it plays directly in the player's ears (Loud & Clear!)
+        if (Camera.main != null)
+        {
+            tempAudioObj.transform.position = Camera.main.transform.position;
+            tempAudioObj.transform.parent = Camera.main.transform;
+        }
+
+        AudioSource source = tempAudioObj.AddComponent<AudioSource>();
+        source.clip = clip;
+        source.volume = volume;
+        source.spatialBlend = 0.0f; // Force 2D sound so it's perfectly crisp and never too far away
+
+        // Skip to your exact start time and play
+        source.time = audioStartTime;
+        source.Play();
+
+        // Calculate how long this specific audio piece should live
+        float durationToPlay = audioEndTime - audioStartTime;
+        if (durationToPlay > 0)
+        {
+            yield return new WaitForSeconds(durationToPlay);
+        }
+
+        // Destroy only this single gunshot object when its time is up
+        Destroy(tempAudioObj);
+    }
+}
