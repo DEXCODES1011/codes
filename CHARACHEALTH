@@ -1,0 +1,79 @@
+using UnityEngine;
+using System.Collections;
+
+public class CharacterHealth : MonoBehaviour
+{
+    public float maxHealth = 100f;
+    private float currentHealth;
+
+    [Header("Damage Indicator Settings")]
+    public Color flashColor = Color.red;
+    public float flashDuration = 0.15f;
+
+    // Stores all body parts and their original colors
+    private Renderer[] characterRenderers;
+    private Color[][] originalColors;
+
+    void Start()
+    {
+        currentHealth = maxHealth;
+
+        // Automatically finds all mesh and skinned mesh renderers on the Mixamo character
+        characterRenderers = GetComponentsInChildren<Renderer>();
+
+        // Save the original colors so we can revert back to them after flashing red
+        originalColors = new Color[characterRenderers.Length][];
+        for (int i = 0; i < characterRenderers.Length; i++)
+        {
+            originalColors[i] = new Color[characterRenderers[i].materials.Length];
+            for (int j = 0; j < characterRenderers[i].materials.Length; j++)
+            {
+                originalColors[i][j] = characterRenderers[i].materials[j].color;
+            }
+        }
+    }
+
+    public void TakeDamage(float damageAmount)
+    {
+        currentHealth -= damageAmount;
+        Debug.Log(gameObject.name + " took " + damageAmount + " damage. Health left: " + currentHealth);
+
+        // Start the red damage flash effect
+        StartCoroutine(FlashRedEffect());
+
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+
+    IEnumerator FlashRedEffect()
+    {
+        // 1. Change all body and clothing parts to red
+        for (int i = 0; i < characterRenderers.Length; i++)
+        {
+            for (int j = 0; j < characterRenderers[i].materials.Length; j++)
+            {
+                characterRenderers[i].materials[j].color = flashColor;
+            }
+        }
+
+        // 2. Wait for a split second
+        yield return new WaitForSeconds(flashDuration);
+
+        // 3. Revert all parts back to their original textures/colors
+        for (int i = 0; i < characterRenderers.Length; i++)
+        {
+            for (int j = 0; j < characterRenderers[i].materials.Length; j++)
+            {
+                characterRenderers[i].materials[j].color = originalColors[i][j];
+            }
+        }
+    }
+
+    void Die()
+    {
+        Debug.Log(gameObject.name + " has DIED!");
+        Destroy(gameObject);
+    }
+}
