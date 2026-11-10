@@ -1,0 +1,47 @@
+using UnityEngine;
+
+public class Bullet : MonoBehaviour
+{
+    public float speed = 50f;
+    public float lifeTime = 3f;
+    public float damage = 20f;
+
+    void Start()
+    {
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            // Forces the bullet to move forward instantly
+            rb.velocity = transform.forward * speed;
+        }
+
+        Destroy(gameObject, lifeTime);
+    }
+
+    // Changed from OnCollisionEnter to OnTriggerEnter
+    void OnTriggerEnter(Collider other)
+    {
+        string hitName = other.gameObject.name.ToLower();
+
+        // 1. Ignore the player, gun, or other bullets entirely
+        if (hitName.Contains("player") || hitName.Contains("pistol") || hitName.Contains("gun") || hitName.Contains("bullet"))
+        {
+            return;
+        }
+
+        // 2. Print exactly what the ghost bullet just passed through
+        Debug.Log("Bullet passed through: " + other.gameObject.name);
+
+        // 3. Search the target or its parent bones for the health script
+        CharacterHealth health = other.gameObject.GetComponentInParent<CharacterHealth>();
+
+        if (health != null)
+        {
+            health.TakeDamage(damage);
+            Destroy(gameObject); // Only destroy the bullet if it hits a valid target!
+        }
+
+        // Optional: Uncomment the line below if you want the bullet to pop on walls too
+        // else if (hitName.Contains("wall") || hitName.Contains("ground")) { Destroy(gameObject); }
+    }
+}
